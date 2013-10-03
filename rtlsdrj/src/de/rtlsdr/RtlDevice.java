@@ -23,9 +23,6 @@ import java.util.Map;
 
 public class RtlDevice {
 
-  private static final String MSG_DEVICE_ALREADY_OPEN = "device already open";
-  private static final String MSG_DEVICE_NOT_OPEN = "device not open";
-
   public final static int TUNER_UNKNOWN = 0;
   public final static int TUNER_E4000 = 1;
   public final static int TUNER_FC0012 = 2;
