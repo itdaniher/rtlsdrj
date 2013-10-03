@@ -1,0 +1,76 @@
+<project name="rtlsdrj" default="dist" basedir=".">
+	
+  <description></description>
+  
+  <!-- set global properties for this build -->
+  <property name="src" location="src"/>
+  <property name="bin" location="antbuild/bin" />
+  <property name="doc" location="antbuild/doc" />
+  <property name="dist" location="antbuild/dist" />
+  <property name="include" location="antbuild/include" />
+
+  <property name="javac.source" value="1.5" />
+  <property name="javac.target" value="1.5" />
+  <property name="javac.debug" value="true" />
+  <property name="javac.verbose" value="true" />
+  <property name="javah.verbose" value="true" />
+  <property name="javadoc.verbose" value="true" />
+
+  <path id="project.classpath">
+    <pathelement path="${classpath}"/>
+    <!-- <pathelement location="some.jar"/> -->
+  </path>
+
+  <target name="clean" description="clean up" >
+    <delete dir="${bin}" />
+    <delete dir="${doc}" />
+    <delete dir="${dist}" />
+    <delete dir="${include}" />
+  </target>
+  
+  <target name="init" depends="clean" description="create the directories">
+    <tstamp />
+    <mkdir dir="${bin}" />
+    <mkdir dir="${doc}" />
+    <mkdir dir="${dist}" />
+    <mkdir dir="${include}" />
+  </target>
+	
+  <target name="bin" depends="init" description="compile the source" >
+    <javac srcdir="${src}" destdir="${bin}" verbose="${javac.verbose}"
+      debug="${javac.debug}" source="${javac.source}"
+      target="${javac.target}" classpathref="project.classpath">
+      <!-- <compilerarg line="-Xlint:deprecation -Xlint:unchecked"/> -->
+    </javac>
+    <javah classpath="${bin}" class="de.rtlsdr.RtlDevice"
+      outputFile="${include}/rtlsdrj.h" />
+    <exec executable="javap" output="${include}/sigs.txt">
+      <arg value="-s" />
+      <arg value="-classpath" />
+      <arg value="${bin}" />
+      <arg value="de.rtlsdr.RtlCallback" />
+      <arg value="de.rtlsdr.RtlDevice" />
+      <arg value="de.rtlsdr.RtlException" />
+      <arg value="de.rtlsdr.UsbStrings" />
+      <arg value="de.rtlsdr.XtalFreq" />
+    </exec>
+  </target>
+  
+  <target name="doc" depends="init" description="generate the java docs">
+    <javadoc packagenames="de.rtlsdr.*" sourcepath="${src}" destdir="${doc}"
+      author="true" version="true" use="true" windowtitle="${ant.project.name}"
+      Encoding="utf-8" docencoding="iso-8859-1">
+      <doctitle>${ant.project.name}</doctitle>
+        <bottom><![CDATA[<i>Copyright &#169; 2013, Robert Schoch.</i>]]></bottom>
+        <tag name="todo" scope="all" description="ToDo:"/>
+        <group title="RTL-SDR Java Native Calls" packages="de.rtlsdr:de.rtlsdr.*" />
+      </javadoc>
+  </target>
+
+  <target name="dist" depends="bin,doc" description="generate the distribution" >
+    <jar jarfile="${dist}/${ant.project.name}-src.jar" basedir="${src}"/>
+    <jar jarfile="${dist}/${ant.project.name}-bin.jar" basedir="${bin}"/>
+    <jar jarfile="${dist}/${ant.project.name}-doc.jar" basedir="${doc}"/>
+  </target>
+  
+</project>
