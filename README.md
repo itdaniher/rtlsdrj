@@ -6,10 +6,10 @@ Java JNI wrapper for the Osmocom rtl-sdr library.
 
 Set the VM arguments:
 
-    -Djava.library.path=${workspace_loc}/rtlsdrj/lib
+    -Djava.library.path=${project_loc}/lib
     -Xcheck:jni
 
 Set the PATH environment:
 
-    PATH=${workspace_loc}/rtlsdrj/lib;%PATH%
+    PATH=${project_loc}/lib;%PATH%
   
