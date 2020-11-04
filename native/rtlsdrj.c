@@ -15,7 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdint.h>
+//#include <stdint.h>
+#include <string.h>
 #include <jni.h>
 #include "rtlsdrj.h"
 #include "rtl-sdr.h"
@@ -23,13 +24,14 @@
 // The ctx type for rtlsdr_read_async()
 
 typedef struct jcb_ctx {
-    rtlsdr_dev_t *dev;
-    JNIEnv *env;
-    jobject jcb;
+    rtlsdr_dev_t *dev; // the RTL device pointer
+    jobject jcb; // the Java callback
+    // JNIEnv *env; // the JNIEnv from readAsync()
 } jcb_ctx_t;
-typedef jcb_ctx_t *jcb_ctx_p;
 
-// To hold classes, methods and fields as global references.
+// To hold jvm, classes, methods and fields as global references.
+
+JavaVM *jvm = NULL;
 
 jclass illegalArgumentExceptionClass = NULL;
 jclass nullPointerExceptionClass = NULL;
@@ -92,7 +94,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
 
   JNIEnv* env;
 
-  if((*vm)->GetEnv(vm, (void**)&env, JNI_VERSION_1_4)!=JNI_OK) return 0;
+  if((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_4) != JNI_OK) return 0;
 
   // Do all the class loading overhead on JNI startup.
 
@@ -109,6 +111,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
   if((rtlDevHandleField = (*env)->GetFieldID(env, rtlDeviceClass, "devHandle", "J")) == NULL) return 0;
   if((rtlCallbackMethod = (*env)->GetMethodID(env, rtlCallbackInterface, "rtlData",
       "(Ljava/nio/ByteBuffer;I)V")) == NULL) return 0;
+
+  jvm = vm;
 
   return JNI_VERSION_1_4;
 
@@ -477,6 +481,8 @@ JNIEXPORT jintArray JNICALL Java_de_rtlsdr_RtlDevice_getTunerGains
   jintGains = (*env)->NewIntArray(env, ret);
   if((*env)->ExceptionCheck(env) == JNI_TRUE) return NULL;
 
+  // TODO Is this simple cast from int * to jint * really safe on all platforms?
+
   (*env)->SetIntArrayRegion(env, jintGains, 0, (jsize)ret, (jint *)gains);
   if((*env)->ExceptionCheck(env) == JNI_TRUE) return NULL;
 
@@ -715,19 +721,24 @@ JNIEXPORT jint JNICALL Java_de_rtlsdr_RtlDevice_readSync(
 
 void AsyncCallback(unsigned char *buf, uint32_t len, void *ctx) {
 
-  jcb_ctx_p jcb_ctx = (jcb_ctx_t *)ctx;
+  jcb_ctx_t *jcb_ctx = ctx;
   rtlsdr_dev_t *dev = jcb_ctx->dev;
-  JNIEnv *env = jcb_ctx->env;
   jobject jcb = jcb_ctx->jcb;
 
+  JNIEnv * env; // = jcb_ctx->env;
   jobject dbb;
 
-  if((*env)->ExceptionCheck(env) == JNI_TRUE) {
+  // we cannot use the JNIEnv from readAsync. Other functions caused errors:
+  // FATAL ERROR in native method: Using JNIEnv in the wrong thread
+  // but now, width -Xcheck:jni we have another error:
+  // FATAL ERROR in native method: Bad global or local ref passed to JNI
+  if((*jvm)->GetEnv(jvm, (void **)&env, JNI_VERSION_1_4) != JNI_OK) {
+    // we don't have a valid JNIEnv pointer and therefore we cannot throw an exception!
     rtlsdr_cancel_async(dev);
     return;
   }
 
-  // Is this potentially expensive, although the buffers remain the same ?
+  // TODO Is this potentially expensive, although the buffers remain the same ?
 
   dbb = (*env)->NewDirectByteBuffer(env, buf, len);
   if((*env)->ExceptionCheck(env) == JNI_TRUE) {
@@ -754,8 +765,8 @@ JNIEXPORT void JNICALL Java_de_rtlsdr_RtlDevice_readAsync(
   if((*env)->ExceptionCheck(env) == JNI_TRUE) return;
 
   ctx.dev = (rtlsdr_dev_t *)jdevHandle; // the device handle
-  ctx.env = env; // the current JNIEnv interface pointer
   ctx.jcb = jcb; // the Java callback instance that implements RtlCallback
+  // ctx.env = env;
 
   ret = rtlsdr_read_async((rtlsdr_dev_t *)jdevHandle,
       AsyncCallback, &ctx, (uint32_t)numBuffers, (uint32_t)bufferLen);

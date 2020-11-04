@@ -27,6 +27,8 @@ public class TestSettings {
 
     try {
 
+      System.out.println("java.library.path: " + System.getProperty("java.library.path"));
+      
       System.out.println("--- test of the static methods ---");
 
       System.out.println("getDeviceCount(): " + RtlDevice.getDeviceCount());

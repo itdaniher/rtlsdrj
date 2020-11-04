@@ -34,7 +34,7 @@ public class TestReadAsync {
       dev.open();
 
       dev.setSampleRate(48000);
-      dev.setCenterFreq(88000000);
+      dev.setCenterFreq(90100000);
       
       System.out.println("The ReaderThread should be started now - waiting 2s. ...");
       ReaderThread t = new ReaderThread(dev);
@@ -46,8 +46,10 @@ public class TestReadAsync {
       dev.cancelAsync();
       Thread.sleep(8000);
 
+      System.out.println("Now Closing " + dev);
       dev.close();
-
+      System.out.println("Closed " + dev);
+      
     } catch (Throwable t) {
 
       System.out.println(" ------------ Error in Main ------------ ");
